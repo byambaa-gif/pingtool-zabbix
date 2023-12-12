@@ -1,0 +1,53 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Local development settings
+local_settings.py
+
+# Database
+db.sqlite3
+*.sqlite3
+
+# Media files
+media/
+
+# Static files
+staticfiles/
+
+# Logs
+*.log
+
+# Environment variables
+.env
+
+# Virtual environment
+venv/
+.env/
+
+# Compiled Python files
+*.pyc
+
+# macOS system files
+.DS_Store
+
+# Byte-compiled files for Python 3
+__pycache__/
+
+# Caches
+.caches/
+
+# Python egg metadata
+*.egg-info/
+dist/
+
+# Pipenv
+Pipfile.lock
+
+# Ignore .idea folder for PyCharm users
+.idea/
+
+# Ignore VS Code settings
+.vscode/

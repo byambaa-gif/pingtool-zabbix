@@ -16,9 +16,9 @@ services:
     ports:
       - "8000:8000"
     networks:
-      - django-network
+      - zabbix-net
 networks:
-  django-network:
+  zabbix-net:
     external: true
 
 

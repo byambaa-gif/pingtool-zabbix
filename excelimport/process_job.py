@@ -1,22 +1,103 @@
-import pandas as pd
-import zabbix_api_service
+from pyzabbix import ZabbixAPI
 
-def zabbix_configuration(file_path, zabbix_api_url, username, password):
-    auth_token = zabbix_api_service.login(zabbix_api_url, username, password)
-    if auth_token:
-        df = pd.read_excel(file_path)
-        for index, row in df.iterrows():
-            job_name = row["Ажлын нэр"]
-            sheet = row["Хяналт sheet"]
-            host_group_id = zabbix_api_service.create_host_group(zabbix_api_url, auth_token, job_name)
-            
-            if host_group_id:
-                df = pd.read_excel(file_path, sheet_name=str(sheet))
-                for index, row in df.iterrows():
-                    serilon_name = row["Серилон нэр"]
-                    wan = row["wan"]
-                    template_name = "ICMP ping"
-                    template_id = zabbix_api_service.get_template_id(zabbix_api_url, auth_token, template_name)
-                    
-                    if template_id:
-                        zabbix_api_service.create_host(zabbix_api_url, auth_token, serilon_name, wan, template_id, host_group_id)
+def login(zabbix_api_url, username, password):
+    zapi = ZabbixAPI(zabbix_api_url)
+    zapi.login(user=username, password=password)
+    auth_token = zapi.auth
+    # zapi.timeout = 5.1
+    print(f"Successfully logged in. Auth token: {auth_token}")
+    return zapi
+
+def create_host_group(zapi, group_name):
+    result = zapi.hostgroup.create(name=group_name)
+    return result
+
+def get_host_group_id(zapi, host_group_name):
+    result = zapi.hostgroup.get(filter={"name": host_group_name})
+    if result:
+        return result[0]['groupid']
+    else:
+        print(f"Host group '{host_group_name}' not found.")
+        return None
+
+def get_template_id(zapi, template_name):
+    result = zapi.template.get(filter={"host": template_name})
+    if result:
+        return result[0]['templateid']
+    else:
+        print(f"Template '{template_name}' not found.")
+        return None
+
+def create_host(zapi, host_name, ip, template_id, host_group_id):
+    result = zapi.host.create(
+        host=host_name,
+        interfaces=[{
+            "type": 1,
+            "main": 1,
+            "useip": 1,
+            "ip": ip,
+            "port": "10050",
+            "dns": ""
+        }],
+        groups=[{
+            "groupid": host_group_id
+        }],
+        templates=[{
+            "templateid": template_id
+        }]
+    )
+    print(result)
+    print(result['hostids'])
+
+def get_host_id(zapi, host_name):
+
+    host_info = zapi.host.get(filter={'host': host_name}, output=['hostid', 'host'])
+    
+    if host_info:
+        # Extract hostid
+        hostid = host_info[0]['hostid']
+        print(f"Host ID for {host_name}: {hostid}")
+        return hostid
+    else:
+        print(f"No matching host found for {host_name}")
+        
+
+def get_last_value(zapi, item_key, host_id,):
+
+    item = zapi.item.get(filter={'key_': item_key, 'hostid': host_id}, output='extend', limit=1)
+
+    if item:
+        item_id = item[0]['itemid']
+
+        # Get the last value of the item
+        history = zapi.history.get(itemids=item_id, output='extend', limit=1, sortfield='clock', sortorder='DESC')
+
+        if history:
+            last_value = history[0]['value']
+            print(f"Last value of item {item_key} for host {host_id}: {last_value}")
+        else:
+            print(f"No history found for item {item_key}")
+
+    else:
+        print(f"No item found with key {item_key} for host {host_id}")
+
+ 
+
+ 
+
+# zapi = login("http://127.0.0.1:8081/api_jsonrpc.php", "Admin", "zabbix")
+# print(zapi)
+# # Create a host group
+# group_name = "Test"
+# # group_result = create_host_group(zapi, group_name)
+# # print(group_result)
+# # Get host group ID
+# host_group_id = get_host_group_id(zapi, group_name)
+# print(host_group_id)
+# # Get template ID (replace "Template Name" with the actual template name)
+# template_name = "ICMP Ping"
+# template_id = get_template_id(zapi, template_name)
+# print(template_id)
+# # Create a host
+# result = create_host(zapi, "Sodoo", "172.30.14.36", template_id, host_group_id)
+# print(result)

@@ -82,6 +82,21 @@
       #zabbixButton:hover {
         background-color: #218c53;
       }
+      #deleteHosts {
+        background-color: red;
+        color: #fff;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        margin-top: 20px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+        display: block;
+        margin: 10px auto;
+      }
+      #deleteHosts:hover {
+        background-color: red;
+      }
     </style>
   </head>
   <body>
@@ -97,14 +112,32 @@
       <button id="zabbixButton" onclick="getZabbixReports()">
         Хяналтын Ажлын Тайлан дата авах
       </button>
+      <button id="deleteHosts" onclick="deleteZabbixHosts()">
+        Хяналтын Ажлуудыг устгах
+      </button>
     </div>
 
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
     <script>
-      function getZabbixReports() {
-        // Add your logic to retrieve Zabbix monitoring reports here
-        alert("Fetching Zabbix Monitoring Reports...");
-        // You can make an AJAX request or perform any other action here
-      }
+        $(document).ready(function() {
+            $("#deleteHosts").click(function() {
+                // Make an AJAX request to the Django view
+                $.ajax({
+                    type: "DELETE",
+                    url: "{% url 'delete_hosts' %}",  // Replace 'delete_hosts' with the actual URL name of your Django view
+                    success: function(response) {
+                        // Handle the success response from the server
+                        console.log(response);
+                        alert(response.message);  // You can customize how you want to handle the success response
+                    },
+                    error: function(error) {
+                        // Handle the error response from the server
+                        console.log(error);
+                        alert("Failed to delete hosts. Please try again.");  // You can customize how you want to handle the error response
+                    }
+                });
+            });
+        });
     </script>
   </body>
 </html>

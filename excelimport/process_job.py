@@ -1,4 +1,4 @@
-from pyzabbix import ZabbixAPI
+from pyzabbix import ZabbixAPI, ZabbixAPIException
 
 def login(zabbix_api_url, username, password):
     zapi = ZabbixAPI(zabbix_api_url)
@@ -60,7 +60,7 @@ def get_host_id(zapi, host_name):
         return hostid
     else:
         print(f"No matching host found for {host_name}")
-        
+
 
 def get_last_value(zapi, item_key, host_id,):
 
@@ -82,8 +82,20 @@ def get_last_value(zapi, item_key, host_id,):
         print(f"No item found with key {item_key} for host {host_id}")
 
  
+def delete_hosts(zapi, host_id):
+    try:
+        zapi.host.delete(params=host_id)
+        print(f"Hosts with IDs {host_id} deleted successfully.")
+    except ZabbixAPIException as e:
+        print(f"Error deleting hosts with IDs {host_id}: {e}")
 
- 
+def delete_host_group(zapi, host_group_ids):
+    try:
+        zapi.hostgroup.delete(params = host_group_ids)
+        print(f"Host groups with IDs {host_group_ids} deleted successfully.")
+    except ZabbixAPIException as e:
+        if 'No permissions to referred object or it does not exist!' in str(e):
+            print(f"Host group {host_group_ids} not exist ")
 
 # zapi = login("http://127.0.0.1:8081/api_jsonrpc.php", "Admin", "zabbix")
 # print(zapi)

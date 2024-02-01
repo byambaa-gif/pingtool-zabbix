@@ -4,28 +4,100 @@ from django.shortcuts import render
 from .forms import ExcelUploadForm
 from .models import ExcelData
 import pandas as pd
-import json
-from excelimport import process_job
-from django.http import HttpResponse
+from excelimport import zabbix_service
+from django.http import HttpResponse, FileResponse, Http404
 import os
 from datetime import datetime
 from django.views.decorators.csrf import csrf_exempt
+import xlsxwriter
+from django.shortcuts import get_object_or_404
+from django.http import FileResponse
+from django.views import View
+from django.conf import settings
 
-def export_excel_file(request):
+
+def get_report(request):
     if request.method == 'GET':
-        df = pd.read_excel("excel_filename.xlsx")
-        response = HttpResponse(content_type='application/vnd.ms-excel')
-        response['Content-Disposition'] = f'attachment; filename=excel_filename.xlsx'
-        df.to_excel(response, index=False)
+        excel_file_path = os.path.join(os.getcwd(), 'media', 'result.xlsx')   
+        zabbix_api_url = 'http://127.0.0.1:8081/api_jsonrpc.php'
+        username = 'Admin'
+        password = 'zabbix'
+        item_key = 'icmpping'
+        zapi = zabbix_service.login(zabbix_api_url, username, password)
+        if zapi:
+            with pd.ExcelFile(excel_file_path) as excel_file:
+                file_path = os.path.join(os.getcwd(), 'media', 'report.xlsx')   
+                with pd.ExcelWriter(file_path, engine='xlsxwriter') as writer:
+                    for sheet_name in excel_file.sheet_names:
+                        df_sheet = pd.read_excel(excel_file, sheet_name=sheet_name)
+                        for index, row in df_sheet.iterrows():
+                            host_name = row["serilon"]
+                            beforedate = row["beforedate"]
+                            target_date = datetime.strptime(beforedate, '%Y-%m-%d %H:%M')
+                            time_seconds = int(target_date.timestamp())
+
+                            latest_value = zabbix_service.get_zabbix_latest_value(zapi, host_name, item_key)
+                            if latest_value is not None:
+                                df_sheet.at[index, 'After'] = float(latest_value)
+    
+                                print(f"Latest value for {host_name} - {item_key}: {latest_value}")
+                            else:
+                                print(f"No latest value found for {host_name} - {item_key}.")
+                            
+                            historical_value = zabbix_service.get_zabbix_historical_value(zapi, host_name, item_key, time_seconds)
+                            if historical_value is not None:
+                                df_sheet.at[index, 'Before'] = float(historical_value)
+                                print(f"Historical value for {target_date} : {historical_value}")
+                            else:
+                                print(f"No historical data found for {target_date} .")
+                            
+                            df_sheet.at[index, 'ReportingTime'] =  datetime.now().strftime('%Y-%m-%d %H:%M'),
+                        # STYLE
+                            s = df_sheet.style.format('{:.0f}').hide([('groupid'), ('hostid')], axis="columns")
+
+                            def map_background_color(row):
+                                historical_value = row['Before']
+                                latest_value = row['After']
+                                return ['background-color: #a3f5a3' if historical_value == latest_value else 'background-color: #ffb3b3'] * len(row)
+
+                            s.apply(lambda row: map_background_color(row), axis=1)
+
+                            s.set_table_styles([
+                                {'selector': '.background-color #a3f5a3', 'props': 'background-color: #a3f5a3;'},  # Bright green background
+                                {'selector': '.background-color #ffb3b3', 'props': 'background-color: #ffb3b3;'},  # Bright red background
+                            ], overwrite=False)
+    
+                        file_path = os.path.join(os.getcwd(), 'media', 'report.xlsx')
+
+                        s.to_excel(writer, sheet_name=sheet_name)
+                file_path = os.path.join(os.getcwd(), 'media', 'report.xlsx') 
+                with open(file_path, 'rb') as file:
+                    response = HttpResponse(file.read(), content_type="application/vnd.ms-excel")
+                    response['Content-Disposition'] = 'inline; filename="report.xlsx"' 
+                return response
+            # return JsonResponse({'success': True})
+        else:
+            return JsonResponse({'success': False, 'error': 'Failed to authenticate with Zabbix API'})
+
+def download(path):
+    file_path = os.path.join(settings.MEDIA_ROOT, path)  
+    if os.path.exists(path):
+        with open(path, 'rb') as fh:
+            response = HttpResponse(fh.read(), content_type="application/vnd.ms-excel")
+            response['Content-Disposition'] = 'inline; filename=' + os.path.basename(file_path)
+            print(response)
+            return response
         
-        return response
-@csrf_exempt 
+    raise Http404
+
+                        
+@csrf_exempt
 def delete_hosts(request):
     if request.method == 'DELETE':
         zabbix_api_url = 'http://127.0.0.1:8081/api_jsonrpc.php'
         username = 'Admin'
         password = 'zabbix'
-        zapi = process_job.login(zabbix_api_url, username, password)
+        zapi = zabbix_service.login(zabbix_api_url, username, password)
 
         if zapi:
             excel_file_path = os.path.join(os.getcwd(), 'media', 'result.xlsx')
@@ -33,16 +105,14 @@ def delete_hosts(request):
                 for sheet_name in excel_file.sheet_names:
                     df_sheet = pd.read_excel(excel_file, sheet_name=sheet_name)
                     hostnames_to_delete = df_sheet['serilon'].tolist()
-                    host_ids_to_delete = []
                     for hostname in hostnames_to_delete:
                         if hostname:
-                            host_id = process_job.get_host_id(zapi, hostname)
+                            host_id = zabbix_service.get_host_id(zapi, hostname)
                             if host_id is not None:
                                 host = int(host_id)
-                                # host_ids_to_delete.append(host)
-                                process_job.delete_hosts(zapi, host)
+                                zabbix_service.delete_hosts(zapi, host)
             for sheet_name in excel_file.sheet_names:
-                process_job.delete_host_group(zapi, sheet_name)   
+                zabbix_service.delete_host_group(zapi, sheet_name)   
             os.remove(excel_file_path)
             
             return JsonResponse({'success': True, 'message': 'Hosts and Host Groups deleted successfully'})
@@ -60,20 +130,20 @@ def upload_excel(request):
             zabbix_api_url = 'http://127.0.0.1:8081/api_jsonrpc.php'
             username = 'Admin'
             password = 'zabbix'
-            zapi = process_job.login(zabbix_api_url, username, password)
+            zapi = zabbix_service.login(zabbix_api_url, username, password)
             print(zapi)
 
             if zapi:
                 template_name = "ICMP Ping"
-                template_id = process_job.get_template_id(zapi, template_name)
+                template_id = zabbix_service.get_template_id(zapi, template_name)
                 df = pd.read_excel(excel_file)
                 df_result = pd.DataFrame(columns=['groupid', 'serilon', 'wan', 'hostid', 'beforedate', 'Before', 'After'])
 
                 for index, row in df.iterrows():
                     job_name = row["Ажлын нэр"]
                     sheet = row["Хяналт sheet"]
-                    process_job.create_host_group(zapi, job_name)
-                    host_group_id = process_job.get_host_group_id(zapi, job_name)
+                    zabbix_service.create_host_group(zapi, job_name)
+                    host_group_id = zabbix_service.get_host_group_id(zapi, job_name)
                     print(host_group_id)
 
                     if host_group_id:
@@ -84,13 +154,13 @@ def upload_excel(request):
                             wan = row_sheet["wan"]
 
                             if template_id:
-                                host_id = process_job.create_host(zapi, serilon_name, wan, template_id, host_group_id)
+                                host_id = zabbix_service.create_host(zapi, serilon_name, wan, template_id, host_group_id)
                                 df_new_row = pd.DataFrame({
                                     'groupid': host_group_id,
                                     'serilon': serilon_name,
                                     'wan': wan,
                                     'hostid': host_id,
-                                    'beforedate': datetime.now().strftime('%Y-%m-%d %H-%M'),
+                                    'beforedate': datetime.now().strftime('%Y-%m-%d 07:02'),
                                     'Before': None,
                                     'After': None
                                 }, index=[0])
@@ -103,7 +173,7 @@ def upload_excel(request):
                 with pd.ExcelWriter(file_path, engine='xlsxwriter') as writer:
                     for groupid, data in df_result.groupby('groupid', dropna=False):
                         data.to_excel(writer, sheet_name=str(groupid), index=False)         
-                    
+                # return JsonResponse({'success': True, 'msg': 'Succesfully added excel'})    
             else:
                 return JsonResponse({'success': False, 'error': 'Failed to authenticate with Zabbix API'})
         else:

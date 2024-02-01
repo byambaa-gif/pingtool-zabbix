@@ -1,4 +1,6 @@
 from pyzabbix import ZabbixAPI, ZabbixAPIException
+from datetime import datetime
+
 
 def login(zabbix_api_url, username, password):
     zapi = ZabbixAPI(zabbix_api_url)
@@ -8,9 +10,13 @@ def login(zabbix_api_url, username, password):
     print(f"Successfully logged in. Auth token: {auth_token}")
     return zapi
 
+
+
 def create_host_group(zapi, group_name):
     result = zapi.hostgroup.create(name=group_name)
     return result
+
+
 
 def get_host_group_id(zapi, host_group_name):
     result = zapi.hostgroup.get(filter={"name": host_group_name})
@@ -20,6 +26,8 @@ def get_host_group_id(zapi, host_group_name):
         print(f"Host group '{host_group_name}' not found.")
         return None
 
+
+
 def get_template_id(zapi, template_name):
     result = zapi.template.get(filter={"host": template_name})
     if result:
@@ -27,6 +35,8 @@ def get_template_id(zapi, template_name):
     else:
         print(f"Template '{template_name}' not found.")
         return None
+
+
 
 def create_host(zapi, host_name, ip, template_id, host_group_id):
     result = zapi.host.create(
@@ -49,6 +59,8 @@ def create_host(zapi, host_name, ip, template_id, host_group_id):
     print(result)
     print(result['hostids'])
 
+
+
 def get_host_id(zapi, host_name):
 
     host_info = zapi.host.get(filter={'host': host_name}, output=['hostid', 'host'])
@@ -62,24 +74,58 @@ def get_host_id(zapi, host_name):
         print(f"No matching host found for {host_name}")
 
 
-def get_last_value(zapi, item_key, host_id,):
 
-    item = zapi.item.get(filter={'key_': item_key, 'hostid': host_id}, output='extend', limit=1)
 
-    if item:
+def get_zabbix_latest_value(zapi, host_name, item_key):
+    try:
+        host = zapi.host.get(filter={'host': host_name})
+        if not host:
+            raise ZabbixAPIException(f"Host '{host_name}' not found.")
+
+        host_id = host[0]['hostid']
+
+        item = zapi.item.get(hostids=host_id, search={'key_': item_key}, output='extend', limit=1)
+        if not item:
+            raise ZabbixAPIException(f"Item with key '{item_key}' not found for host '{host_name}'.")
+
         item_id = item[0]['itemid']
 
-        # Get the last value of the item
-        history = zapi.history.get(itemids=item_id, output='extend', limit=1, sortfield='clock', sortorder='DESC')
+        latest_value = zapi.item.get(itemids=item_id, output='extend', limit=1)[0]['lastvalue']
+        
+        return latest_value
 
-        if history:
-            last_value = history[0]['value']
-            print(f"Last value of item {item_key} for host {host_id}: {last_value}")
+    except ZabbixAPIException as e:
+        print(f"Zabbix API error: {e}")
+        return None
+
+
+
+def get_zabbix_historical_value(zapi, host_name, item_key, time_seconds):
+    try:
+        host = zapi.host.get(filter={'host': host_name})
+        if not host:
+            raise ZabbixAPIException(f"Host '{host_name}' not found.")
+
+        host_id = host[0]['hostid']
+
+        item = zapi.item.get(hostids=host_id, search={'key_': item_key}, output='extend', limit=1)
+        if not item:
+            raise ZabbixAPIException(f"Item with key '{item_key}' not found for host '{host_name}'.")
+
+        item_id = item[0]['itemid']
+
+        # target_timestamp = int(datetime.strptime(f'{target_date} {target_time}', '%Y-%m-%d %H:%M').timestamp())
+    
+        history = zapi.history.get(itemids=item_id, time_from=time_seconds, output='extend', limit=1)
+        if not history:
+            return None
         else:
-            print(f"No history found for item {item_key}")
+            return history[0]['value']
 
-    else:
-        print(f"No item found with key {item_key} for host {host_id}")
+    except ZabbixAPIException as e:
+        print(f"Zabbix API error: {e}")
+        return None
+    
 
  
 def delete_hosts(zapi, host_id):
@@ -89,6 +135,8 @@ def delete_hosts(zapi, host_id):
     except ZabbixAPIException as e:
         print(f"Error deleting hosts with IDs {host_id}: {e}")
 
+
+
 def delete_host_group(zapi, host_group_ids):
     try:
         zapi.hostgroup.delete(params = host_group_ids)
@@ -97,19 +145,9 @@ def delete_host_group(zapi, host_group_ids):
         if 'No permissions to referred object or it does not exist!' in str(e):
             print(f"Host group {host_group_ids} not exist ")
 
-# zapi = login("http://127.0.0.1:8081/api_jsonrpc.php", "Admin", "zabbix")
-# print(zapi)
-# # Create a host group
-# group_name = "Test"
-# # group_result = create_host_group(zapi, group_name)
-# # print(group_result)
-# # Get host group ID
-# host_group_id = get_host_group_id(zapi, group_name)
-# print(host_group_id)
-# # Get template ID (replace "Template Name" with the actual template name)
-# template_name = "ICMP Ping"
-# template_id = get_template_id(zapi, template_name)
-# print(template_id)
-# # Create a host
-# result = create_host(zapi, "Sodoo", "172.30.14.36", template_id, host_group_id)
-# print(result)
+def zabbix_logout(zabbix):
+    try:
+        zabbix.user.logout()
+        print("Logged out from Zabbix API.")
+    except ZabbixAPIException as e:
+        print(f"Error during Zabbix API logout: {e}")

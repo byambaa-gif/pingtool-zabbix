@@ -1,8 +1,11 @@
 # excelimport/urls.py
 from django.urls import path
-from .views import delete_hosts, upload_excel
+from . import views
 
 urlpatterns = [
-    path('upload/', upload_excel, name='upload_excel'),
-    path('delete_hosts/', delete_hosts, name='delete_hosts'), 
+    path('', views.upload_excel, name='home'),
+    path('upload/', views.upload_excel, name='upload_excel'),
+    path('delete_hosts/', views.delete_hosts, name='delete_hosts'), 
+    path('get_report/', views.get_report, name='get_report'),
+
 ]

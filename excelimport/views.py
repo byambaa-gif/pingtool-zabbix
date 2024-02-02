@@ -14,7 +14,8 @@ from django.shortcuts import get_object_or_404
 from django.http import FileResponse
 from django.views import View
 from django.conf import settings
-
+from django.http import HttpResponse
+from io import BytesIO
 
 def get_report(request):
     if request.method == 'GET':
@@ -66,29 +67,12 @@ def get_report(request):
                                 {'selector': '.background-color #a3f5a3', 'props': 'background-color: #a3f5a3;'},  # Bright green background
                                 {'selector': '.background-color #ffb3b3', 'props': 'background-color: #ffb3b3;'},  # Bright red background
                             ], overwrite=False)
-    
-                        file_path = os.path.join(os.getcwd(), 'media', 'report.xlsx')
-
-                        s.to_excel(writer, sheet_name=sheet_name)
-                file_path = os.path.join(os.getcwd(), 'media', 'report.xlsx') 
-                with open(file_path, 'rb') as file:
-                    response = HttpResponse(file.read(), content_type="application/vnd.ms-excel")
-                    response['Content-Disposition'] = 'inline; filename="report.xlsx"' 
-                return response
-            # return JsonResponse({'success': True})
+                        s.to_excel(writer, sheet_name=sheet_name)  
+                        
+            return JsonResponse({'success': True, 'message': 'successfully'})
         else:
             return JsonResponse({'success': False, 'error': 'Failed to authenticate with Zabbix API'})
 
-def download(path):
-    file_path = os.path.join(settings.MEDIA_ROOT, path)  
-    if os.path.exists(path):
-        with open(path, 'rb') as fh:
-            response = HttpResponse(fh.read(), content_type="application/vnd.ms-excel")
-            response['Content-Disposition'] = 'inline; filename=' + os.path.basename(file_path)
-            print(response)
-            return response
-        
-    raise Http404
 
                         
 @csrf_exempt
@@ -131,7 +115,8 @@ def upload_excel(request):
             username = 'Admin'
             password = 'zabbix'
             zapi = zabbix_service.login(zabbix_api_url, username, password)
-            print(zapi)
+            # excel_file_path="http://localhost:8000/media/result.xlsx"
+            # print(zapi)
 
             if zapi:
                 template_name = "ICMP Ping"
@@ -180,4 +165,7 @@ def upload_excel(request):
             return JsonResponse({'success': False, 'error': 'Form is not valid'})
     else:
         form = ExcelUploadForm()
-    return render(request, 'upload.html', {'form': form})
+        excel_url="http://localhost:8000/media/report.xlsx"
+        # # get_report_test = get_report(request)
+        # print(form,"getReport")
+    return render(request, 'upload.html', {'form': form,'excel_url':excel_url})

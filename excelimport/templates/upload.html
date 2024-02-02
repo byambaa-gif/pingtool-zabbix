@@ -107,10 +107,26 @@
         {% csrf_token %}
         <input type="file" name="file" id="file" accept=".xlsx, .xls" />
         <button type="submit">Файл оруулах</button>
-      </form>
-      <!-- Zabbix Monitoring Button -->
+      </form>  
+     
+      <!-- Zabbix Monitoring Button -->  
+      <!-- if(response.message ="success"){
+        <button id="getReport">
+          <a href="/test">
+            download
+          </a>
+        </button>
+      }     else{
+        <button id="getReport">
+          Хяналтын Ажлын Тайлан дата авах
+        </button>
+      } -->
       <button id="getReport">
         Хяналтын Ажлын Тайлан дата авах
+      </button>
+      <button id="downloadButton">
+        <a href="{{ excel_url }}" target="_blank">Download Excel File</a>
+
       </button>
       <button id="deleteHosts">
         Хяналтын Ажлуудыг устгах
@@ -119,15 +135,19 @@
 
     <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
     <script>
-        $(document).ready(function() {
+        $(document).ready(function() {                           
+            $("#downloadButton").hide();
+
             $("#getReport").click(function() {
                 $.ajax({
                     type: "GET",
                     url: "{% url 'get_report' %}",
                     success: function(response) {
-                        console.log(response);
-                        console.log(response.message);
-                        // alert(response.message);  
+                        console.log(response,"response")
+                        if (response.success==true) {
+                          $("#downloadButton").show();
+                          $("#getReport").hide();
+                        }
                     },
                     error: function(error) {   
                         console.log(error);

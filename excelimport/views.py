@@ -104,8 +104,8 @@ def delete_hosts(request):
             return JsonResponse({'success': False, 'error': 'Failed to authenticate with Zabbix API'})    
     return JsonResponse({'success': False, 'error': 'Invalid request method'})
 
-    
 def upload_excel(request):
+
     if request.method == 'POST':
         form = ExcelUploadForm(request.POST, request.FILES)
         if form.is_valid():

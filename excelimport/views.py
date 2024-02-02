@@ -1,6 +1,6 @@
 # excelimport/views.py
 from django.http import JsonResponse
-from django.shortcuts import render
+from django.shortcuts import render,redirect
 from .forms import ExcelUploadForm
 from .models import ExcelData
 import pandas as pd
@@ -16,6 +16,7 @@ from django.views import View
 from django.conf import settings
 from django.http import HttpResponse
 from io import BytesIO
+from django.contrib.auth.decorators import login_required
 
 def get_report(request):
     if request.method == 'GET':

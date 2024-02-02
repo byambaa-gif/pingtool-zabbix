@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     "rest_auth",
     "rest_framework.authtoken",
     "rest_framework",
+    'crispy_forms',
 ]
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
@@ -138,3 +139,6 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 MEDIA_URL = "/media/"
+# settings.py
+
+CRISPY_TEMPLATE_PACK = 'bootstrap4'

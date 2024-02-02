@@ -128,7 +128,7 @@ def upload_excel(request):
                     template_name = "ICMP Ping"
                     template_id = zabbix_service.get_template_id(zapi, template_name)
                     df = pd.read_excel(excel_file)
-                    df_result = pd.DataFrame(columns=['groupid', 'serilon', 'wan', 'hostid', 'beforedate', 'Before', 'After'])
+                    df_result = pd.DataFrame(columns=['groupid','RFCnumber', 'serilon', 'wan', 'hostid', 'beforedate', 'Before', 'After'])
 
                     for index,row in df.iterrows():
                         job_name = row["Ажлын нэр"]
@@ -148,7 +148,8 @@ def upload_excel(request):
                                     host_id = zabbix_service.create_host(zapi, serilon_name, wan, template_id, host_group_id)
                                     df_new_row = pd.DataFrame({
                                         'groupid': host_group_id,
-                                        'serilon': serilon_name,
+                                        'RFCnumber': (str(sheet)),
+                                        'serilon':serilon_name,
                                         'wan': wan,
                                         'hostid': host_id,
                                         'beforedate': datetime.now().strftime('%Y-%m-%d 07:02'),
@@ -163,7 +164,7 @@ def upload_excel(request):
 
                     with pd.ExcelWriter(file_path, engine='xlsxwriter') as writer:
                         for groupid, data in df_result.groupby('groupid', dropna=False):
-                            data.to_excel(writer, sheet_name=str(groupid), index=False)         
+                            data.to_excel(writer, sheet_name=groupid, index=False)         
                     # return JsonResponse({'success': True, 'msg': 'Succesfully added excel'})   
                 except Exception as e:             
                     error_message = f"Hosts already exist"            

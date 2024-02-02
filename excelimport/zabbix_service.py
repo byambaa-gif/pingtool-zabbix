@@ -13,9 +13,12 @@ def login(zabbix_api_url, username, password):
 
 
 def create_host_group(zapi, group_name):
-    result = zapi.hostgroup.create(name=group_name)
-    return result
-
+    try:
+        message ="already exist"
+        result = zapi.hostgroup.create(name=group_name)
+        return result
+    except ZabbixAPIException as e:
+        return message
 
 
 def get_host_group_id(zapi, host_group_name):
@@ -56,10 +59,7 @@ def create_host(zapi, host_name, ip, template_id, host_group_id):
             "templateid": template_id
         }]
     )
-    print(result)
-    print(result['hostids'])
-
-
+    return result['hostids']
 
 def get_host_id(zapi, host_name):
 
@@ -72,8 +72,6 @@ def get_host_id(zapi, host_name):
         return hostid
     else:
         print(f"No matching host found for {host_name}")
-
-
 
 
 def get_zabbix_latest_value(zapi, host_name, item_key):

@@ -5,7 +5,7 @@ from .forms import ExcelUploadForm
 from .models import ExcelData
 import pandas as pd
 from excelimport import zabbix_service
-from django.http import HttpResponse, FileResponse, Http404
+from django.http import HttpResponse, FileResponse, Http404, HttpResponseNotFound
 import os
 from datetime import datetime
 from django.views.decorators.csrf import csrf_exempt
@@ -119,53 +119,56 @@ def upload_excel(request):
             # print(zapi)
 
             if zapi:
-                template_name = "ICMP Ping"
-                template_id = zabbix_service.get_template_id(zapi, template_name)
-                df = pd.read_excel(excel_file)
-                df_result = pd.DataFrame(columns=['groupid', 'serilon', 'wan', 'hostid', 'beforedate', 'Before', 'After'])
+                try:
+                    template_name = "ICMP Ping"
+                    template_id = zabbix_service.get_template_id(zapi, template_name)
+                    df = pd.read_excel(excel_file)
+                    df_result = pd.DataFrame(columns=['groupid', 'serilon', 'wan', 'hostid', 'beforedate', 'Before', 'After'])
 
-                for index, row in df.iterrows():
-                    job_name = row["Ажлын нэр"]
-                    sheet = row["Хяналт sheet"]
-                    zabbix_service.create_host_group(zapi, job_name)
-                    host_group_id = zabbix_service.get_host_group_id(zapi, job_name)
-                    print(host_group_id)
+                    for index,row in df.iterrows():
+                        job_name = row["Ажлын нэр"]
+                        sheet = row["Хяналт sheet"]
+                        tets= zabbix_service.create_host_group(zapi, job_name)
+                        host_group_id = zabbix_service.get_host_group_id(zapi, job_name)
+                        print(tets,"host_group_id")
+                    
+                        if host_group_id:
+                            df_sheet = pd.read_excel(excel_file, sheet_name=str(sheet))
 
-                    if host_group_id:
-                        df_sheet = pd.read_excel(excel_file, sheet_name=str(sheet))
+                            for index_sheet, row_sheet in df_sheet.iterrows():
+                                serilon_name = row_sheet["Серилон нэр"]
+                                wan = row_sheet["wan"]
 
-                        for index_sheet, row_sheet in df_sheet.iterrows():
-                            serilon_name = row_sheet["Серилон нэр"]
-                            wan = row_sheet["wan"]
+                                if template_id:
+                                    host_id = zabbix_service.create_host(zapi, serilon_name, wan, template_id, host_group_id)
+                                    df_new_row = pd.DataFrame({
+                                        'groupid': host_group_id,
+                                        'serilon': serilon_name,
+                                        'wan': wan,
+                                        'hostid': host_id,
+                                        'beforedate': datetime.now().strftime('%Y-%m-%d 07:02'),
+                                        'Before': None,
+                                        'After': None
+                                    }, index=[0])
 
-                            if template_id:
-                                host_id = zabbix_service.create_host(zapi, serilon_name, wan, template_id, host_group_id)
-                                df_new_row = pd.DataFrame({
-                                    'groupid': host_group_id,
-                                    'serilon': serilon_name,
-                                    'wan': wan,
-                                    'hostid': host_id,
-                                    'beforedate': datetime.now().strftime('%Y-%m-%d 07:02'),
-                                    'Before': None,
-                                    'After': None
-                                }, index=[0])
+                                    df_result = pd.concat([df_result, df_new_row], ignore_index=True)
+                        else:
+                            return JsonResponse({'success': False, 'error': 'Failed to get host group ID from Zabbix API'})
+                    file_path = os.path.join(os.getcwd(), 'media', 'result.xlsx')
 
-                                df_result = pd.concat([df_result, df_new_row], ignore_index=True)
-                    else:
-                        return JsonResponse({'success': False, 'error': 'Failed to get host group ID from Zabbix API'})
-                file_path = os.path.join(os.getcwd(), 'media', 'result.xlsx')
-
-                with pd.ExcelWriter(file_path, engine='xlsxwriter') as writer:
-                    for groupid, data in df_result.groupby('groupid', dropna=False):
-                        data.to_excel(writer, sheet_name=str(groupid), index=False)         
-                # return JsonResponse({'success': True, 'msg': 'Succesfully added excel'})    
-            else:
-                return JsonResponse({'success': False, 'error': 'Failed to authenticate with Zabbix API'})
-        else:
-            return JsonResponse({'success': False, 'error': 'Form is not valid'})
+                    with pd.ExcelWriter(file_path, engine='xlsxwriter') as writer:
+                        for groupid, data in df_result.groupby('groupid', dropna=False):
+                            data.to_excel(writer, sheet_name=str(groupid), index=False)         
+                    # return JsonResponse({'success': True, 'msg': 'Succesfully added excel'})   
+                except Exception as e:             
+                    error_message = f"Hosts already exist"            
+                    return render(request, 'upload.html', {'form': form, "error_message": error_message})
+                     
     else:
         form = ExcelUploadForm()
-        excel_url="http://localhost:8000/media/report.xlsx"
-        # # get_report_test = get_report(request)
-        # print(form,"getReport")
-    return render(request, 'upload.html', {'form': form,'excel_url':excel_url})
+    if form:
+        excel_url= "http://localhost:8000/media/report.xlsx"
+        return render(request, 'upload.html', {'form': form,'excel_url':excel_url})
+    else:
+        return render(request, 'upload.html', {'form': form})
+    

@@ -108,32 +108,33 @@
 </head>
 
 <body>
-    <div class="container">
-        <header>Хяналтын Ажлыг оруул</header>
-        
-        {% if user.is_authenticated %}
-            <form method="post" enctype="multipart/form-data">
-                {% csrf_token %}
-                <input type="file" class="form-control" name="file" id="file" accept=".xlsx, .xls" />
-                <button type="submit" class="btn btn-primary">Файл оруулах</button>
-            </form>
-            {{ error_message }}
-            <button id="getReport" class="btn btn-success">
-                Хяналтын Ажлын Тайлан дата авах
-                <span id="loadingGetReport" class="loadingSpinner"></span>
-            </button>
-            <button id="downloadButton" class="btn btn-primary">
-                <a href="{{ excel_url }}" class="text-white">Download Excel File</a>
-            </button>
-            <button id="deleteHosts" class="btn btn-danger">
-                Хяналтын Ажлуудыг устгах
-                <span id="loadingDeleteHosts" class="loadingSpinner"></span>
-            </button>
-        {% else %}
-            <p>Please <a href="{% url 'your_login_url' %}">log in</a> to access this page.</p>
-        {% endif %}
+  <div class="container">
+    <header>Хяналтын Ажлыг оруул</header>
+    
+    {% if user.is_authenticated %}
+        <p>Welcome, {{ user.username }}! You are logged in.</p>
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="file" class="form-control" name="file" id="file" accept=".xlsx, .xls" />
+            <button type="submit" class="btn btn-primary">Файл оруулах</button>
+        </form>
+        {{ error_message }}
+        <button id="getReport" class="btn btn-success">
+            Хяналтын Ажлын Тайлан дата авах
+            <span id="loadingGetReport" class="loadingSpinner"></span>
+        </button>
+        <button id="downloadButton" class="btn btn-primary">
+            <a href="{{ excel_url }}" class="text-white">Download Excel File</a>
+        </button>
+        <button id="deleteHosts" class="btn btn-danger">
+            Хяналтын Ажлуудыг устгах
+            <span id="loadingDeleteHosts" class="loadingSpinner"></span>
+        </button>
+    {% else %}
+        <p>Please <a href="{% url 'your_login_url' %}">log in</a> to access this page.</p>
+    {% endif %}
 
-    </div>
+</div>
 
     <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>

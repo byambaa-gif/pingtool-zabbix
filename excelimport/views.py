@@ -18,6 +18,10 @@ from django.http import HttpResponse
 from io import BytesIO
 from django.contrib.auth.decorators import login_required
 
+def get_report_page(request):
+    excel_url= "http://localhost:8000/media/report.xlsx"
+    return render(request, 'get_report.html', {'excel_url':excel_url})
+
 def get_report(request):
     if request.method == 'GET':
         excel_file_path = os.path.join(os.getcwd(), 'media', 'result.xlsx')   

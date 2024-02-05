@@ -165,7 +165,10 @@ def upload_excel(request):
                     with pd.ExcelWriter(file_path, engine='xlsxwriter') as writer:
                         for groupid, data in df_result.groupby('groupid', dropna=False):
                             data.to_excel(writer, sheet_name=groupid, index=False)         
-                    # return JsonResponse({'success': True, 'msg': 'Succesfully added excel'})   
+                    # return JsonResponse({'success': True, 'msg': 'Succesfully added excel'})  
+                    html = df_result.to_html
+                    print('asd')
+                    print(html) 
                 except Exception as e:             
                     error_message = f"Hosts already exist"            
                     return render(request, 'upload.html', {'form': form, "error_message": error_message})
@@ -173,7 +176,8 @@ def upload_excel(request):
     else:
         form = ExcelUploadForm()
     if form:
-        excel_url= "http://localhost:8000/media/report.xlsx"
+        excel_url= "http://localhost:8000/media/report.xlsx"       
+        
         return render(request, 'upload.html', {'form': form,'excel_url':excel_url})
     else:
         return render(request, 'upload.html', {'form': form})

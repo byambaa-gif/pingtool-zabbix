@@ -1,29 +1,50 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Login</title>
-  </head>
-  <body>
-    {% if error %}
-    <p style="color: red">{{ error }}</p>
-    {% endif %} {% if token %}
-    <p>Welcome, {{ username }}!</p>
-    <p>User ID: {{ user_id }}</p>
-    <p>Is Superuser: {{ superuser }}</p>
-    <p>Token: {{ token }}</p>
-    {% else %}
-    <form method="post" action="{% url 'user_login' %}">
-      {% csrf_token %}
-      <label for="username">Username or Email:</label>
-      <input type="text" id="username" name="username" required /><br />
-
-      <label for="password">Password:</label>
-      <input type="password" id="password" name="password" required /><br />
-
-      <input type="submit" value="Login" />
-    </form>
-    {% endif %}
-  </body>
-</html>
+{% extends 'base.html' %} {% block content %} <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login</title>
+  <style>
+    .login-form {
+    padding: 20px;
+    margin: auto;
+}
+  </style>
+</head>
+<section class="login-form">
+  <div class="container">
+    <div class="row justify-content-center align-items-center min-vh-100">
+      <div class="col-md-6">
+        <div class="bg-light p-5">
+          <h2 class="mb-4">Login</h2>
+          {% if error %}
+            <div class="alert alert-danger error-message" role="alert">
+              {{ error }}
+            </div>
+          {% endif %}
+          {% if token %}
+            <div class="login-form">
+              <p class="welcome-message">Welcome, {{ username }}!</p>
+              <p>User ID: {{ user_id }}</p>
+              <p>Is Superuser: {{ superuser }}</p>
+              <p>Token: {{ token }}</p>
+            </div>
+          {% else %}
+            <form method="post" id="loginForm" action="{% url 'user_login' %}">
+              {% csrf_token %}
+              <div class="mb-3">
+                <label for="username" class="form-label">Нэвтрэх нэр:</label>
+                <input type="text" class="form-control" id="username" name="username" required />
+              </div>
+              <div class="mb-3">
+                <label for="password" class="form-label">Нууц үг:</label>
+                <input type="password" class="form-control" id="password" name="password" required />
+              </div>
+              <div class="d-flex justify-content-center mt-3">
+                <button type="submit" class="btn btn-primary">Нэвтрэх</button>
+              </div>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section> {% endblock %}

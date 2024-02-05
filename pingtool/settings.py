@@ -44,6 +44,8 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",
     "rest_framework",
     'crispy_forms',
+    "bootstrap5",
+    'channels',
 ]
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
@@ -68,7 +70,9 @@ ROOT_URLCONF = "pingtool.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [
+            os.path.join(BASE_DIR, 'pingtool', 'templates'),
+        ],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -83,7 +87,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "pingtool.wsgi.application"
 
-
+ASGI_APPLICATION = 'pingtool.routing.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 

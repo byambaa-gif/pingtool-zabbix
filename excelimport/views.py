@@ -143,7 +143,7 @@ def upload_excel(request):
                             for index_sheet, row_sheet in df_sheet.iterrows():
                                 serilon_name = row_sheet["Серилон нэр"]
                                 wan = row_sheet["wan"]
-
+                                wan = wan.strip()
                                 if template_id:
                                     host_id = zabbix_service.create_host(zapi, serilon_name, wan, template_id, host_group_id)
                                     df_new_row = pd.DataFrame({
@@ -152,7 +152,7 @@ def upload_excel(request):
                                         'serilon':serilon_name,
                                         'wan': wan,
                                         'hostid': host_id,
-                                        'beforedate': datetime.now().strftime('%Y-%m-%d 07:02'),
+                                        'beforedate': datetime.now().strftime('%Y-%m-%d 23:30'),
                                         'Before': None,
                                         'After': None
                                     }, index=[0])
@@ -164,11 +164,8 @@ def upload_excel(request):
 
                     with pd.ExcelWriter(file_path, engine='xlsxwriter') as writer:
                         for groupid, data in df_result.groupby('groupid', dropna=False):
-                            data.to_excel(writer, sheet_name=groupid, index=False)         
-                    # return JsonResponse({'success': True, 'msg': 'Succesfully added excel'})  
-                    html = df_result.to_html
-                    print('asd')
-                    print(html) 
+                            data.to_excel(writer, sheet_name=groupid, index=False)          
+
                 except Exception as e:             
                     error_message = f"Hosts already exist"            
                     return render(request, 'upload.html', {'form': form, "error_message": error_message})
